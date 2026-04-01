@@ -41,3 +41,58 @@ pip install -r requirements.txt
 5. Add tests to verify key behaviors.
 6. Connect your logic to the Streamlit UI in `app.py`.
 7. Refine UML so it matches what you actually built.
+
+---
+
+## Features
+
+- **Owner & pet management** — register an owner and any number of pets (name, species, age).
+- **Task scheduling** — add care tasks with time (HH:MM), duration, priority, frequency, and due date.
+- **Sorting by time** — all tasks are displayed in chronological order using a `sort_by_time()` method that sorts HH:MM strings lexicographically.
+- **Filtering** — filter the schedule by pet name and/or completion status (pending / completed / all).
+- **Conflict warnings** — the scheduler detects when two tasks for the same pet are booked at the exact same time and surfaces a warning in the UI.
+- **Daily recurrence** — marking a `daily` or `weekly` task complete automatically creates the next occurrence (using Python's `timedelta`) without any manual work.
+- **Today's view** — a dedicated `get_todays_schedule()` method returns only incomplete tasks whose due date is today, sorted by time.
+
+---
+
+## Smarter Scheduling
+
+The `Scheduler` class (in `pawpal_system.py`) adds four algorithmic features beyond basic CRUD:
+
+| Feature | Method | How it works |
+|---|---|---|
+| Chronological sorting | `sort_by_time()` | `sorted()` with a lambda key on the HH:MM string |
+| Flexible filtering | `filter_tasks(pet_name, completed)` | List comprehension with optional predicates |
+| Recurring tasks | `mark_task_complete(pet, task)` | Calls `task.next_occurrence()` and appends the result to the pet |
+| Conflict detection | `detect_conflicts()` | Iterates each pet's tasks, tracking seen times in a dict |
+
+**Tradeoff:** Conflict detection checks for exact time matches only, not overlapping durations. This keeps the logic simple and fast while catching the most common scheduling mistake.
+
+---
+
+## Testing PawPal+
+
+### Run the tests
+
+```bash
+python -m pytest
+```
+
+### What the tests cover
+
+| Test | Behaviour verified |
+|---|---|
+| `test_mark_complete_changes_status` | `mark_complete()` flips `is_complete` |
+| `test_add_task_increases_count` | `add_task()` grows the task list |
+| `test_once_task_has_no_next_occurrence` | One-off tasks don't recur |
+| `test_sort_by_time_returns_chronological_order` | Tasks sorted regardless of insertion order |
+| `test_daily_task_creates_next_occurrence` | Daily recurrence adds task for tomorrow |
+| `test_weekly_task_creates_next_occurrence_seven_days_later` | Weekly recurrence adds task in 7 days |
+| `test_conflict_detection_flags_same_time` | Two tasks at same time → one warning |
+| `test_no_conflict_when_times_differ` | Different times → no warnings |
+| `test_filter_by_pet_name` | Filter returns only named pet's tasks |
+| `test_filter_by_completion_status` | Filter excludes completed/pending correctly |
+| `test_pet_with_no_tasks_has_empty_schedule` | Empty pet → empty results, no crash |
+
+**Confidence level: ★★★★☆** — all 11 tests pass; duration-overlap and midnight-spanning edge cases are not yet covered.
